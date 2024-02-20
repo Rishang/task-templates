@@ -5,14 +5,14 @@
     - [summary](#summary)
     - [required variables](#required-variables)
     - [variables](#variables)
-- [ecr-build-push](#ecr-build-push)
+- [ecr:build-push](#ecrbuild-push)
     - [summary](#summary)
     - [required variables](#required-variables)
     - [variables](#variables)
 - [ssm](#ssm)
     - [summary](#summary)
     - [required variables](#required-variables)
-- [ecs-deploy](#ecs-deploy)
+- [ecs:deploy](#ecsdeploy)
     - [summary](#summary)
     - [required variables](#required-variables)
     - [variables](#variables)
@@ -41,7 +41,7 @@ requires:
 - **CF_S3_BUCKET**: `{{default "" .CF_S3_BUCKET}}`
 
 
-## ecr-build-push
+## ecr:build-push
 
 Build and push docker image to ECR
 
@@ -77,7 +77,7 @@ requires:
 - **COMMAND**
 
 
-## ecs-deploy
+## ecs:deploy
 
 Deploy a new task definition to ECS
 

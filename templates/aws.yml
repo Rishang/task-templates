@@ -35,7 +35,7 @@ tasks:
           aws cloudfront create-invalidation --distribution-id {{.CF_DISTRIBUTION_ID}} --paths "/*" | cat
         fi
 
-  ecr-build-push:
+  ecr:build-push:
     desc: Build and push docker image to ECR
     summary: |
       Build and push docker image to ECR
@@ -90,7 +90,7 @@ tasks:
           --parameters commands="{{.COMMAND}}" \
           --output text
 
-  ecs-deploy:
+  ecs:deploy:
     desc: Deploy a new task definition to ECS
     summary: |
       Deploy a new task definition to ECS
