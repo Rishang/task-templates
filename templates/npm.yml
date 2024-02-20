@@ -1,0 +1,17 @@
+version: '3'
+
+tasks:
+  build:
+    desc: "Install dependencies and build the project"
+    summary: "Install dependencies of node project"
+    requires:
+      vars:
+      - PATH
+    dir: '{{.PATH}}'
+    preconditions:
+      - test -e package.json
+    cmds:
+      - |
+        echo "Path: $(pwd)"
+        yarn install
+        yarn run build

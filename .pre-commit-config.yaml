@@ -1,0 +1,10 @@
+repos:
+- repo: local
+  # rev: generate_docs.py # Replace with the actual path to your script
+  hooks:
+  - id: custom-test
+    name: "Generate documentation"
+    entry: ./generate_docs.py # Replace with the actual path to your script
+    args: ["python", "generate_docs.py"]
+    fail_fast: true # Stop processing hooks if this one fails
+    language: system # Tell pre-commit it's a shell script

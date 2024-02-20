@@ -1,0 +1,116 @@
+# taskfile
+version: '3'
+
+includes:
+  npm: "./npm.yml"
+  docker: "./docker.yml"
+
+tasks:
+  cloudfront:deploy:
+    desc: Build the static NPM frountend projects optionally push them to CloudFront
+    summary: |
+      Build the frontend projects and optionally push them to CloudFront
+      requires:
+      - **PATH**: The path to the project
+      - **CF_PUSH**: [default => false] Push to CloudFront
+      - **CF_DISTRIBUTION_ID**: [optional] The CloudFront distribution ID 
+      - **CF_S3_BUCKET**: [optional] The S3 bucket to push to
+    requires:
+      vars:
+      - PATH
+    vars:
+      BUILD_DIR: '{{default "build" .BUILD_DIR}}'
+      CF_PUSH: '{{default "false" .CF_PUSH}}'
+      CF_DISTRIBUTION_ID: '{{default "" .CF_DISTRIBUTION_ID}}'
+      CF_S3_BUCKET: '{{default "" .CF_S3_BUCKET}}'
+    dir: '{{.PATH}}'
+    cmds:
+      - task: npm:build
+        vars:
+          PATH: '{{.PATH}}'
+      - |
+        if [ "{{.CF_PUSH}}" == "true" ]; then
+          echo "Pushing to CloudFront"
+          aws s3 sync {{.BUILD_DIR}}/ s3://{{.CF_S3_BUCKET}} --delete
+          aws cloudfront create-invalidation --distribution-id {{.CF_DISTRIBUTION_ID}} --paths "/*" | cat
+        fi
+
+  ecr-build-push:
+    desc: Build and push docker image to ECR
+    summary: |
+      Build and push docker image to ECR
+      requires:
+      - **PATH**: The path to the Dockerfile
+      - **ECR_REPOSITORY**: The name of the ECR repository
+    requires:
+      vars:
+      - PATH
+      - ECR_REPOSITORY
+    vars:
+      USE_BUILDX_PUSH: '{{default "false" .USE_BUILDX_PUSH}}'
+      AWS_DEFAULT_REGION:
+        sh: |
+          echo "${AWS_DEFAULT_REGION:-us-east-1}"
+      IMAGE_TAG: '{{default "latest" .IMAGE_TAG}}'
+      ACCOUNT_ID:
+        sh: |
+          aws sts get-caller-identity --query Account --output text
+      ECR_REGISTRY:
+        sh: |
+          echo "{{.ACCOUNT_ID}}.dkr.ecr.{{.AWS_DEFAULT_REGION}}.amazonaws.com"
+    cmds:
+      - |
+        echo "Building image for ECR: {{.ECR_REGISTRY}}/{{.ECR_REPOSITORY}}:{{.IMAGE_TAG}}"
+        aws ecr get-login-password --region "{{.AWS_DEFAULT_REGION}}" | docker login --username AWS --password-stdin "{{.ECR_REGISTRY}}";
+      - task: docker:build_push
+        vars:
+          PATH: '{{.PATH}}'
+          REGISTRY: '{{.ECR_REGISTRY}}'
+          REPOSITORY: '{{.ECR_REPOSITORY}}'
+          EXTRA_TAG: '{{.IMAGE_TAG}}'
+          USE_BUILDX_PUSH: '{{.USE_BUILDX_PUSH}}'
+
+
+  ssm:
+    desc: Run a command on a remote server using SSM
+    summary: |
+      Run a command on a remote server using SSM
+      requires:
+      - **INSTANCE_ID**: The instance ID
+      - **COMMAND**: The command to run
+    requires:
+      vars:
+      - INSTANCE_ID
+      - COMMAND
+    cmds:
+      - |
+        aws ssm send-command --instance-ids {{.INSTANCE_ID}} \
+          --document-name "AWS-RunShellScript" \
+          --comment "Run a command" \
+          --parameters commands="{{.COMMAND}}" \
+          --output text
+
+  ecs-deploy:
+    desc: Deploy a new task definition to ECS
+    summary: |
+      Deploy a new task definition to ECS
+      requires:
+      - CLUSTER: The name of the ECS cluster
+      - SERVICE: The name of the ECS service
+    requires:
+      vars:
+      - CLUSTER
+      - SERVICE
+    vars:
+      TASK_DEFINITION:
+        sh: |
+          aws ecs list-task-definitions \
+            --family-prefix {{.SERVICE}} \
+            --sort DESC --output text --query 'taskDefinitionArns[0]'
+    cmds:
+      - |
+        echo "Updating service {{.SERVICE}} on cluster {{.CLUSTER}} with task definition {{.TASK_DEFINITION}}"
+        aws ecs update-service \
+          --cluster {{.CLUSTER}} \
+          --service {{.SERVICE}} \
+          --task-definition {{.TASK_DEFINITION}}

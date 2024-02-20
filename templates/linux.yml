@@ -1,0 +1,24 @@
+version: '3'
+
+tasks:
+  ssh:
+    desc: SSH into a server
+    summary: |
+      SSH into a server
+      requires:
+      - HOST: The host to connect to
+      - USER: The user to connect as
+      - ARGS: [optional] Additional arguments to pass to the ssh command eg: "-i /path/to/key.pem"
+      - COMMAND: The command to run
+    requires:
+      vars:
+      - HOST
+      - USER
+      - COMMAND
+    vars:
+      ARGS: '{{default "" .ARGS}}'
+    cmds:
+      - |
+        echo "{{.ARGS}}"
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+          {{.ARGS}} {{.USER}}@{{.HOST}} '{{.COMMAND}}'

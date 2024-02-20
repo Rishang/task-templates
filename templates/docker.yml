@@ -1,0 +1,66 @@
+version: '3'
+
+tasks:
+  build_push:
+    desc: "Build the docker image"
+    summary: "Build the docker image and push it to the registry"
+    requires:
+      vars:
+        - REGISTRY
+        - REPOSITORY
+        - PATH
+    vars:
+      IMAGE_TAG: "development"
+      STAGE: '{{default .IMAGE_TAG .STAGE}}'
+      ARGS: '{{default "" .ARGS}}'
+      USE_BUILDX_PUSH: '{{default "false" .USE_BUILDX_PUSH}}'
+      CACHE_FROM_LOCAL_PATH: '{{default "" .CACHE_FROM_LOCAL_PATH}}' 
+      TMP_DIR:
+        sh: |
+          IMAGE=/tmp/docker-build/{{.REPOSITORY}}-{{.IMAGE_TAG}}
+          mkdir -p $IMAGE
+          echo $IMAGE
+      BUILDX_CMD:
+        sh: |
+          {{if eq .CACHE_FROM_LOCAL_PATH ""}}
+            cache_from="registry,ref={{.REGISTRY}}/{{.REPOSITORY}}:{{.STAGE}}"
+            cache_to="inline"
+          {{else}}
+            cache_from="local,src={{.CACHE_FROM_LOCAL_PATH}}"
+            cache_to="local,dest={{.CACHE_FROM_LOCAL_PATH}}/cache"
+          {{end}}
+          echo docker buildx build \
+            --cache-from type=$cache_from --cache-to type=$cache_to \
+            {{range $no, $line := .ARGS | splitLines -}}
+            {{$line}} \
+            {{end}} --tag {{.REGISTRY}}/{{.REPOSITORY}}:{{.STAGE}} \
+            --tag {{.REGISTRY}}/{{.REPOSITORY}}:{{.IMAGE_TAG}} \
+            --iidfile {{.TMP_DIR}}/iidfile \
+            --push {{.PATH}}
+            # --metadata-file {{.TMP_DIR}}/metadata-file \
+      BUILD:
+        sh: |
+          echo docker build -t "{{.REGISTRY}}/{{.REPOSITORY}}:{{.IMAGE_TAG}}" "{{.PATH}}"
+          echo docker push "{{.REGISTRY}}/{{.REPOSITORY}}:{{.IMAGE_TAG}}"
+          echo docker tag "{{.REGISTRY}}/{{.REPOSITORY}}:{{.IMAGE_TAG}}" "{{.REGISTRY}}/{{.REPOSITORY}}:{{.STAGE}}"
+          echo docker push "{{.REGISTRY}}/{{.REPOSITORY}}:{{.STAGE}}"
+
+    cmds:
+      - echo "Building the docker image"
+      - |
+        echo "Using temp dir {{.TMP_DIR}}"
+        echo "Building the docker image"
+        echo "REGISTRY: {{.REGISTRY}}"
+        echo "REPOSITORY: {{.REPOSITORY}}"
+        echo "STAGE: {{.STAGE}}"
+        echo "IMAGE_TAG: {{.IMAGE_TAG}}"
+
+      - |
+        export DOCKER_BUILDKIT=1
+        {{if eq .USE_BUILDX_PUSH "true"}}
+          echo "Using buildx registry caching and pushing"
+          {{.BUILDX_CMD}}
+        {{else}}
+          echo "Using regular build"
+          {{.BUILD}}
+        {{end}}
