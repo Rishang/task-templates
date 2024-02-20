@@ -1,7 +1,7 @@
 
 ## Table of Contents
 
-- [cloudfront:deploy](#cloudfront:deploy)
+- [cloudfront:deploy](#cloudfrontdeploy)
     - [summary](#summary)
     - [required variables](#required-variables)
     - [variables](#variables)

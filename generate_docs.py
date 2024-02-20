@@ -26,7 +26,7 @@ def generate_docs_table_of_contents(md_data):
                 # if title_ref.endswith(":"):
                 #     title_ref = title_ref[:-1]
                 space = len(fmt) - 2
-                toc += f"""{"  "*space}- [{title.lower().strip()}](#{title_ref})\n"""
+                toc += f"""{"  "*space}- [{title.lower().strip()}](#{title_ref.replace(":","")})\n"""
     return toc
 
 
