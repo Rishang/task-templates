@@ -1,0 +1,7 @@
+version: '3'
+
+includes:
+  npm: "./templates/npm.yml"
+  docker: "./templates/docker.yml"
+  aws: "./templates/aws.yml"
+  linux: "./templates/linux.yml"
